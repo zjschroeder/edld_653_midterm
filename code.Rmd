@@ -233,16 +233,141 @@ ggplot(b2, aes(x = nest_by_data, y = group_by_data)) +
 
 Hint: You need to select unique *districts*. You may want to try something like the following
 
-```{r}
-models_group_by <- d %>%
+### Version 1: Group_by()
+
+```{r Question 3.1}
+library(ggtext)
+plot_dat <- mnb_output %>%
+  mutate(
+    district = stringr::word(district, 1) # Removing unnecessary language
+  ) %>% 
   group_by(district) %>% 
     nest()
+
+plot_dat <- plot_dat[c(1:100),] %>% # Selecting first 100 cases
+  mutate(
+    plot = map2(
+      district, data, ~(
+  ggplot(.y, aes(academic_year, v)) +
+  geom_hline(aes(yintercept = 0),
+             colour = "red") +
+  geom_errorbar(mapping = aes(ymin = v - v_se,
+                              ymax = v + v_se),
+                colour = "lightgrey",
+                width=0.5) +
+  geom_path(group = 1,
+            colour = "lightgrey") +
+  geom_point(aes(colour = cut(v, c(-Inf, 0, Inf))),
+             size = 3) +
+  scale_color_manual(values = c("(-Inf,0]" = "#d25cff",
+                                  "(0, Inf]" = "#5ca2ff")) +
+  labs(
+    title = paste0("Achievement Gap Estimates: ", .x, " School District"),
+    subtitle = "<span style='font-size:10pt;'>Negative values indicate 
+    <span style='color:#D25CFF;'>White</span> 
+    students have higher average achievement <br>Positive values indicate 
+    <span style='color:#5CA2FF;'>Hispanic/Latino</span> 
+    students have higher average achievement",
+    x = "School Year",
+    y = "Average Achievement Distance (SD units)",
+    caption = paste0("Note: District included ", .y$n_school, " schools")
+  ) +
+    theme_dark() +
+    theme(legend.position = "none",
+          plot.subtitle = element_markdown())
+)))
+
 ```
 
+### Version 2: Nest_by()
+
+```{r Question 3.2}
+library(ggtext)
+plot_dat_2 <- mnb_output %>%
+  ungroup() %>% 
+  mutate(
+    district = stringr::word(district, 1) # Removing unnecessary language
+  ) %>% 
+  nest_by(district) %>% 
+  head(., 8)
+
+plot_dat_2 <- plot_dat_2 %>% 
+  summarise(
+    plot = list(
+  ggplot(data, aes(academic_year, v)) +
+  geom_hline(aes(yintercept = 0),
+             colour = "red") +
+  geom_errorbar(mapping = aes(ymin = v - v_se,
+                              ymax = v + v_se),
+                colour = "lightgrey",
+                width=0.5) +
+  geom_path(group = 1,
+            colour = "lightgrey") +
+  geom_point(aes(colour = cut(v, c(-Inf, 0, Inf))),
+             size = 3) +
+  scale_color_manual(values = c("(-Inf,0]" = "#d25cff",
+                                  "(0, Inf]" = "#5ca2ff")) +
+  labs(
+    title = paste0("Achievement Gap Estimates: ", district, " School District"),
+    subtitle = "<span style='font-size:10pt;'>Negative values indicate 
+    <span style='color:#D25CFF;'>White</span> 
+    students have higher average achievement <br>Positive values indicate 
+    <span style='color:#5CA2FF;'>Hispanic/Latino</span> 
+    students have higher average achievement",
+    x = "School Year",
+    y = "Average Achievement Distance (SD units)",
+    caption = paste0("Note: District included ", n_school, " schools")
+  ) +
+    theme_dark() +
+    theme(legend.position = "none",
+          plot.subtitle = element_markdown())
+))
+
+```
+
+
+> I used the [Wilke Lab's](https://wilkelab.org/ggtext/articles/introduction.html) ggtext introduction to match your styling and the chrome "eyedropper" extension to match your colors, but couldn't get the background of the plot to match perfectly, I hope that's okay! 
 
 **Extra Credit:** For up to one point extra credit, create a third set that "staples together" each of the preceding pairs of plots (i.e., to confirm that the plots were produced identically by both methods).
 
 4. (10 points) Save the plots into a "plots" directory. Make sure the file names are meaningful.
+
+```{r Question 3}
+
+# Create the directory
+fs::dir_create(here::here("plots", "districts"))
+
+# Create file paths
+files <- str_replace_all(
+  tolower(final_plots$district),
+  " ",
+  "-"
+)
+
+paths <- here::here("plots", "districts", glue("{files}.png"))
+
+# Merge plots and file paths
+final_plots %>% 
+  ungroup() %>%
+  mutate(path = paths) %>% 
+  select(plots, path)
+
+# Save plots
+final_plots %>% 
+  ungroup() %>%
+  mutate(path = paths) %>% 
+  rowwise() %>%
+  summarize(
+    ggsave(
+      path, 
+      plots, 
+      width = 9.5, 
+      height = 6.5,
+      dpi = 500
+    )
+  )
+
+```
 
 **HINTS**
 
