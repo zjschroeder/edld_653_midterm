@@ -353,11 +353,11 @@ fs::dir_create(here::here("plots", "map2"))
 
 # Create file paths
 files <- str_replace_all(
-  tolower(plot_dat$district),
+  toupper(plot_dat$district),
   " ",
   "-"
 )
-files <- paste0("achievement_gaps_in", files, "_school_district")
+files <- paste0("achievement_gaps_in_", files, "_school_district")
 paths <- here::here("plots", "map2", glue("{files}.png"))
 
 # Save plots
@@ -378,11 +378,11 @@ fs::dir_create(here::here("plots", "nest_by"))
 
 # Create file paths
 files <- str_replace_all(
-  tolower(plot_dat_2$district),
+  toupper(plot_dat_2$district),
   " ",
   "-"
 )
-files <- paste0("achievement_gaps_in", files, "_school_district")
+files <- paste0("achievement_gaps_in_", files, "_school_district")
 paths <- here::here("plots", "nest_by", glue("{files}.png"))
 
 # Save plots

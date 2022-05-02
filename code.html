@@ -320,9 +320,7 @@ d &lt;- distinct_function(d)</code></pre>
 <div id="points-1" class="section level3">
 <h3>40 points</h3>
 <p>If you have not already done so, please install the <a href="https://github.com/datalorax/gapr">{gapr}</a> package using the following code</p>
-<pre class="r"><code>remotes::install_github(&quot;datalorax/gapr&quot;)</code></pre>
-<pre><code>## Skipping install of &#39;gapr&#39; from a github remote, the SHA1 (d192c3a3) has not changed since last install.
-##   Use `force = TRUE` to force installation</code></pre>
+<pre class="r"><code>#remotes::install_github(&quot;datalorax/gapr&quot;)</code></pre>
 <p>The {gapr} package includes, at the moment, one function, <code>estimate_v()</code>, which estimates the average difference between two distributions in terms of an effect size when the only data available are counts within bins (for more information, see <a href="https://journals.sagepub.com/doi/10.3102/1076998611411918">Ho &amp; Reardon, 2012</a>). The nice thing about this approach is that we’re able to obtain the effect size of average differences in achievement between two groups of students <em>as if we had the full, student level data</em> even though we just have counts within bins (performance levels).</p>
 <p>The <code>estimate_v</code> function takes 3 arguments in the following order: (1) the data frame including the counts for each group, (2) a character string stating the name of the column with the counts for the reference group, and (3) a character string stating the name of the column with the counts for the focal group.</p>
 <p>To estimate the average achievement difference between students coded Hispanic/Latino versus White for the first school district in the first year in our data, we would run the following</p>
@@ -532,11 +530,11 @@ fs::dir_create(here::here(&quot;plots&quot;, &quot;map2&quot;))
 
 # Create file paths
 files &lt;- str_replace_all(
-  tolower(plot_dat$district),
+  toupper(plot_dat$district),
   &quot; &quot;,
   &quot;-&quot;
 )
-files &lt;- paste0(&quot;achievement_gaps_in&quot;, files, &quot;_school_district&quot;)
+files &lt;- paste0(&quot;achievement_gaps_in_&quot;, files, &quot;_school_district&quot;)
 paths &lt;- here::here(&quot;plots&quot;, &quot;map2&quot;, glue(&quot;{files}.png&quot;))
 
 # Save plots
@@ -684,11 +682,11 @@ fs::dir_create(here::here(&quot;plots&quot;, &quot;nest_by&quot;))
 
 # Create file paths
 files &lt;- str_replace_all(
-  tolower(plot_dat_2$district),
+  toupper(plot_dat_2$district),
   &quot; &quot;,
   &quot;-&quot;
 )
-files &lt;- paste0(&quot;achievement_gaps_in&quot;, files, &quot;_school_district&quot;)
+files &lt;- paste0(&quot;achievement_gaps_in_&quot;, files, &quot;_school_district&quot;)
 paths &lt;- here::here(&quot;plots&quot;, &quot;nest_by&quot;, glue(&quot;{files}.png&quot;))
 
 # Save plots
