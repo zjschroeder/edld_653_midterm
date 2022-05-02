@@ -49,7 +49,7 @@ download_file <- function(year) {
 
 1. (10 points) Use the function above to download *all* of the data from the 2014-15 to 2017-18 school years and bind it into a single data frame, **using a single function** (i.e., one line of code). Note, this may take a minute or two to run, depending on your Internet speed.
 
-```{r Question 1.1}
+```{r Question A1.1}
 data <- map_df(seq(15,18,1), download_file)
 
 head(data)
@@ -61,7 +61,7 @@ Conduct some basic data cleaning to make your data file look like the following.
 * Select variables related to the number of students in each of the levels (1:4), and not percentages or collapsed levels.
 * Remove any row that has missing data in any of the *n* variables
 
-```{r Question 1.2, cache = T}
+```{r Question A1.2, cache = T}
 data <- data %>% 
   # Clean column names
   janitor::clean_names() %>% 
@@ -92,7 +92,10 @@ data <- data %>%
 2. (10 points) Sum the *n* across grades and school for each district within each academic year, student group, and level. Calculate the number of schools (unique schools listed) for each district. Also move your data to a wider format where the student groups become new columns, filled by the district n. Remove districts that did not report numbers for one or both student groups (i.e., drop missing data from the new columns). Your data frame should look like the below
 
 
-```{r}
+```{r Question A2}
+data <- data %>% 
+  select(academic_year, district, school, student_group, level, n)
+
 d <- split(data, data$district)
 
 # Unique Schools
@@ -112,14 +115,21 @@ d <- map(d, n_school_funct)
 # Sum n across grades and school for each district within each academic year, student group, and level
 sum_function <- function(df){
   df %>% 
+    select(academic_year, district, n_school, student_group, level, n) %>% 
     group_by(academic_year, student_group, level) %>% 
     mutate(
       n = sum(n)
     ) %>% 
+    unique() %>% 
     pivot_wider(names_from = "student_group",
-         values_from = "n") %>% 
-    janitor::clean_names()
+                          values_from = "n") %>% 
+            janitor::clean_names() 
 }
+
+d <- map(d, sum_function)
+  
+
+d <- Filter(function(x) ncol(x) == 6, d)
 
 # Reduce to single dataframe
 
@@ -130,22 +140,15 @@ distinct_function <- function(df){
     dplyr::distinct()
 }
 
-completeFun <- function(data, desiredCols) {
-  completeVec <- complete.cases(data[, desiredCols])
-  return(data[completeVec, ])
-}
-
 ### RUN
-d <- map(d, sum_function) %>% 
-  Filter(function(x) ncol(x) == 8, .)
-
-d <- map(d, distinct_function)
-
-d <- map(d, ~completeFun(.x, c("hispanic_latino", "white")))
-
 d <- do.call(rbind, d)
-```
 
+d <- d %>% 
+  drop_na(hispanic_latino, white)
+
+d <- distinct_function(d)
+
+```
 
 # Part B: Achievement disparities
 ### 40 points
@@ -163,7 +166,6 @@ The `estimate_v` function takes 3 arguments in the following order: (1) the data
 
 To estimate the average achievement difference between students coded Hispanic/Latino versus White for the first school district in the first year in our data, we would run the following
 
-
 ```{r}
 library(gapr)
 d[1:4, ] %>% # data source - just first four rows for first district
@@ -180,7 +182,36 @@ standard deviations below students coded White within this school district for t
 
 1. (10 points) Estimate the average achievement differences in terms of an effect size for every school district in the state that reported data on both student groups (i.e., using the data we created above), for each academic year. Conduct this analysis twice, once using `group_by() %>% nest() map()` and once using `nest_by() %>% summarize()`.
 
+```{r Question B1.1 group_by}
+models_group_by <- d %>%
+  group_by(district, academic_year, n_school) %>% 
+    nest()
 
+mgp_output <- models_group_by %>% 
+  mutate(
+    output = map(data, ~estimate_v(.x, "white", "hispanic_latino"))
+  ) %>% 
+  select(district, academic_year, n_school, output) %>% 
+  unnest(cols = c(output))
+
+```
+
+```{r Question B1.2 nest_by}
+models_nest_by <- d %>%
+  ungroup() %>% 
+  nest_by(district, academic_year, n_school) 
+
+mnb_output <- models_nest_by %>% 
+  summarise(
+    output = estimate_v(data, "white", "hispanic_latino")
+  ) %>% 
+  mutate(
+    auc = output$auc,
+    v = output$v,
+    v_se = output$v_se
+  ) %>% 
+  select(district, academic_year, n_school, auc, v, v_se)
+```
 
 Note, on my computer these took about 40 seconds per analysis. It will likely take a bit longer for you, but shouldn't take *too* long. You may get a warning. Just go ahead and ignore that for now.
 
@@ -188,16 +219,24 @@ Note, on my computer these took about 40 seconds per analysis. It will likely ta
 
 Reproduce the following plot to confirm that the estimates are equivalent across methods.
 
+```{r Question B2}
+b2 <- tibble(
+  nest_by_data = mnb_output$v,
+  group_by_data = mgp_output$v
+)
+ggplot(b2, aes(x = nest_by_data, y = group_by_data)) +
+  geom_point() +
+  geom_smooth()
+```
 
 3. (15 points) The plot below shows the achievement difference estimates for one school district across years. Produce a similar plot to the below for each of the first 100 school districts. Once you've created all the plots, **reproduce them again using an alternative method**. Make sure you don't miss the caption noting the number of schools in the district. 
 
 Hint: You need to select unique *districts*. You may want to try something like the following
 
 ```{r}
-dists <- unique(v$district)[1:100]
-
-model_list_object %>% 
-  filter(district %in% dists)
+models_group_by <- d %>%
+  group_by(district) %>% 
+    nest()
 ```
 
 
