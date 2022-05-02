@@ -157,7 +157,7 @@ If you have not already done so, please install the [{gapr}](https://github.com/
 
 
 ```{r}
-remotes::install_github("datalorax/gapr")
+#remotes::install_github("datalorax/gapr")
 ```
 
 The {gapr} package includes, at the moment, one function, `estimate_v()`, which estimates the average difference between two distributions in terms of an effect size when the only data available are counts within bins (for more information, see [Ho & Reardon, 2012](https://journals.sagepub.com/doi/10.3102/1076998611411918)). The nice thing about this approach is that we're able to obtain the effect size of average differences in achievement between two groups of students *as if we had the full, student level data* even though we just have counts within bins (performance levels).
@@ -233,7 +233,7 @@ ggplot(b2, aes(x = nest_by_data, y = group_by_data)) +
 
 Hint: You need to select unique *districts*. You may want to try something like the following
 
-### Version 1: Group_by()
+### Version 1: Group_by() & map2
 
 ```{r Question 3.1}
 library(ggtext)
@@ -246,7 +246,7 @@ plot_dat <- mnb_output %>%
 
 plot_dat <- plot_dat[c(1:100),] %>% # Selecting first 100 cases
   mutate(
-    plot = map2(
+    plot_map2 = map2(
       district, data, ~(
   ggplot(.y, aes(academic_year, v)) +
   geom_hline(aes(yintercept = 0),
@@ -289,11 +289,11 @@ plot_dat_2 <- mnb_output %>%
     district = stringr::word(district, 1) # Removing unnecessary language
   ) %>% 
   nest_by(district) %>% 
-  head(., 8)
+  head(., 100)
 
 plot_dat_2 <- plot_dat_2 %>% 
   summarise(
-    plot = list(
+    plot_nestby = list(
   ggplot(data, aes(academic_year, v)) +
   geom_hline(aes(yintercept = 0),
              colour = "red") +
@@ -316,13 +316,12 @@ plot_dat_2 <- plot_dat_2 %>%
     students have higher average achievement",
     x = "School Year",
     y = "Average Achievement Distance (SD units)",
-    caption = paste0("Note: District included ", n_school, " schools")
+    caption = paste0("Note: District included ", data$n_school, " schools")
   ) +
     theme_dark() +
     theme(legend.position = "none",
           plot.subtitle = element_markdown())
 ))
-
 ```
 
 
@@ -330,44 +329,74 @@ plot_dat_2 <- plot_dat_2 %>%
 
 **Extra Credit:** For up to one point extra credit, create a third set that "staples together" each of the preceding pairs of plots (i.e., to confirm that the plots were produced identically by both methods).
 
+```{r Extra credit}
+plots <- left_join(plot_dat, plot_dat_2, by = "district") 
+require(ggpubr)
+plots <- plots %>% 
+  mutate(
+    staple_plots = map2(
+      plot_nestby, plot_map2, ~ggarrange(.x, .y,
+        labels = c("Nest_by()", "map2")
+      )
+  )
+  )
+plots$staple_plots[8]
+```
+
+
 4. (10 points) Save the plots into a "plots" directory. Make sure the file names are meaningful.
 
-```{r Question 3}
-
+```{r Question 4.1}
+##### Saving Plots: Map2
 # Create the directory
-fs::dir_create(here::here("plots", "districts"))
+fs::dir_create(here::here("plots", "map2"))
 
 # Create file paths
 files <- str_replace_all(
-  tolower(final_plots$district),
+  tolower(plot_dat$district),
   " ",
   "-"
 )
-
-paths <- here::here("plots", "districts", glue("{files}.png"))
-
-# Merge plots and file paths
-final_plots %>% 
-  ungroup() %>%
-  mutate(path = paths) %>% 
-  select(plots, path)
+files <- paste0("achievement_gaps_in", files, "_school_district")
+paths <- here::here("plots", "map2", glue("{files}.png"))
 
 # Save plots
-final_plots %>% 
+plot_dat %>% 
   ungroup() %>%
   mutate(path = paths) %>% 
   rowwise() %>%
   summarize(
     ggsave(
       path, 
-      plots, 
-      width = 9.5, 
-      height = 6.5,
-      dpi = 500
-    )
+      plot_map2)
   )
-
 ```
+
+```{r Question 4.2}
+# Create the directory
+fs::dir_create(here::here("plots", "nest_by"))
+
+# Create file paths
+files <- str_replace_all(
+  tolower(plot_dat_2$district),
+  " ",
+  "-"
+)
+files <- paste0("achievement_gaps_in", files, "_school_district")
+paths <- here::here("plots", "nest_by", glue("{files}.png"))
+
+# Save plots
+plot_dat_2 %>% 
+  ungroup() %>%
+  mutate(path = paths) %>% 
+  rowwise() %>%
+  summarize(
+    ggsave(
+      path, 
+      plot_nestby)
+  )
+```
+
 
 **HINTS**
 

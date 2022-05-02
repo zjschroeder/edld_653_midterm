@@ -2,3 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+
+code_cache/html/
+
+code_cache/
